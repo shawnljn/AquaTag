@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+# Common binary design and media formats
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.stl binary
+*.step binary
+*.stp binary
+*.3mf binary
+*.zip binary
+

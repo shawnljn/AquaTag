@@ -1,0 +1,53 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+wandb/
+mlruns/
+
+# JavaScript / React Native
+node_modules/
+.expo/
+.metro-health-check*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Generated build output
+build/
+dist/
+coverage/
+.pio/
+.gradle/
+android/.cxx/
+android/app/build/
+ios/build/
+DerivedData/
+
+# CAD and EDA temporary/backup files
+*.bak
+*.autosave
+*.lck
+*.lock
+~$*
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
