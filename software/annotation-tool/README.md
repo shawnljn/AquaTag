@@ -58,12 +58,13 @@ The loader combines files in timestamp order. Saved events are appended to `labe
 QT_QPA_PLATFORM=offscreen python -m unittest discover -s tests -v
 ```
 
-The test suite covers timestamp parsing, both supported log layouts, fine-sync mapping, shortcut isolation, repeated saves, and plotting a synthetic three-hour recording.
+The test suite covers timestamp parsing, both supported log layouts, fine-sync mapping, shortcut isolation, repeated saves, accelerated-playback stability, and plotting a synthetic three-hour recording.
 
 ## Long-recording optimizations
 
 - Sensor files load on a worker thread rather than freezing the interface.
 - Plot refreshes follow media position events and are coalesced to a bounded rate.
+- Rapid speed-slider events are coalesced before touching the media decoder, and the selected rate is restored after loading a video.
 - Paused video no longer triggers identical redraws.
 - Sensor arrays are cached instead of repeatedly converted from pandas columns.
 - Traces are capped relative to display width and use pyqtgraph peak downsampling.

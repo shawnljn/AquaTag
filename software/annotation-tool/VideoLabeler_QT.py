@@ -423,6 +423,9 @@ class MainWindow(QMainWindow):
         self._saved_label_count = 0
         self._pending_video_position: Optional[int] = None
         self._resume_after_scrub = False
+        self._requested_playback_rate = 1.0
+        self._applied_playback_rate = 1.0
+        self._speed_apply_delay_ms = 120
         self._imu_thread: Optional[QtCore.QThread] = None
         self._imu_worker: Optional[ImuLoadWorker] = None
         self.session_state = self._read_session_state()
@@ -435,6 +438,7 @@ class MainWindow(QMainWindow):
         self.player.durationChanged.connect(self.on_duration_changed)
         self.player.mediaStatusChanged.connect(self.on_media_status_changed)
         self.player.errorOccurred.connect(self.on_media_error)
+        self.player.playbackRateChanged.connect(self.on_playback_rate_changed)
 
         self.video_widget = VideoGraphicsView(self)
         self.player.setVideoOutput(self.video_widget)
@@ -456,7 +460,14 @@ class MainWindow(QMainWindow):
         self.speed_slider = QSlider(Qt.Horizontal)
         self.speed_slider.setMinimum(25)
         self.speed_slider.setMaximum(300)
+        self.speed_slider.setSingleStep(25)
+        self.speed_slider.setPageStep(25)
+        self.speed_slider.setTickInterval(25)
+        self.speed_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.speed_slider.setValue(100)
+        self.speed_slider.setToolTip(
+            "Playback speed (0.25x–3.00x). Changes are applied after dragging stops."
+        )
         self.speed_label = QLabel("Speed: 1.00x")
 
         self.start_time_edit = QLineEdit()
@@ -561,6 +572,14 @@ class MainWindow(QMainWindow):
         self.plot_timer.setSingleShot(True)
         self.plot_timer.setInterval(self._plot_interval_ms)
         self.plot_timer.timeout.connect(self._flush_plot_update)
+
+        # Reconfiguring a multimedia decoder for every intermediate slider value
+        # causes stalls on long/GOP-compressed videos. Coalesce drag events and
+        # apply only the final requested rate.
+        self.speed_apply_timer = QTimer(self)
+        self.speed_apply_timer.setSingleShot(True)
+        self.speed_apply_timer.setInterval(self._speed_apply_delay_ms)
+        self.speed_apply_timer.timeout.connect(self._apply_requested_playback_rate)
 
         self.restore_last_session()
 
@@ -683,6 +702,7 @@ class MainWindow(QMainWindow):
         self.btn_save.clicked.connect(self.on_save_labels)
         self.btn_open_dir.clicked.connect(self.on_open_label_dir)
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
+        self.speed_slider.sliderReleased.connect(self._apply_requested_playback_rate)
         self.sync_offset_spin.valueChanged.connect(self.on_sync_offset_changed)
 
     def _build_plot_overlays(self):
@@ -752,6 +772,20 @@ class MainWindow(QMainWindow):
         last_start = self.session_state.get("last_start_time_input", "")
         if last_start:
             self.start_time_edit.setText(last_start)
+        try:
+            saved_rate = float(self.session_state.get("playback_rate", 1.0))
+        except (TypeError, ValueError):
+            saved_rate = 1.0
+        if not math.isfinite(saved_rate):
+            saved_rate = 1.0
+        saved_rate = min(3.0, max(0.25, saved_rate))
+        slider_value = int(round(saved_rate * 100))
+        self.speed_slider.blockSignals(True)
+        self.speed_slider.setValue(slider_value)
+        self.speed_slider.blockSignals(False)
+        self._requested_playback_rate = self.speed_slider.value() / 100.0
+        self.speed_label.setText(f"Speed: {self._requested_playback_rate:.2f}x")
+        self._apply_requested_playback_rate()
 
     @staticmethod
     def _video_state_key(path: str) -> str:
@@ -954,6 +988,8 @@ class MainWindow(QMainWindow):
             QMediaPlayer.MediaStatus.BufferedMedia,
         ):
             self._apply_pending_seek()
+            # Some backends reset the playback rate while replacing the source.
+            self._apply_requested_playback_rate()
 
     def _apply_pending_seek(self):
         if self._pending_video_position is None or self.player.duration() <= 0:
@@ -988,8 +1024,22 @@ class MainWindow(QMainWindow):
             self.request_plot_update(val)
 
     def on_speed_changed(self, value: int):
-        rate = max(0.1, value / 100.0)
-        self.player.setPlaybackRate(rate)
+        self._requested_playback_rate = min(3.0, max(0.25, value / 100.0))
+        self.speed_label.setText(f"Speed: {self._requested_playback_rate:.2f}x")
+        self.speed_apply_timer.start()
+
+    @Slot()
+    def _apply_requested_playback_rate(self):
+        self.speed_apply_timer.stop()
+        rate = self._requested_playback_rate
+        if not math.isclose(self.player.playbackRate(), rate, abs_tol=1e-6):
+            self.player.setPlaybackRate(rate)
+        self.session_state["playback_rate"] = rate
+        self._write_session_state()
+
+    @Slot(float)
+    def on_playback_rate_changed(self, rate: float):
+        self._applied_playback_rate = float(rate)
         self.speed_label.setText(f"Speed: {rate:.2f}x")
 
     def on_window_size_changed(self, text: str):
@@ -1178,6 +1228,7 @@ class MainWindow(QMainWindow):
             state["position_ms"] = int(self.player.position())
             state["sync_offset_ms"] = self.sync_offset_ms
         self.session_state["last_start_time_input"] = self.start_time_edit.text().strip()
+        self.session_state["playback_rate"] = self._requested_playback_rate
         self._write_session_state(force=True)
         if self._imu_thread is not None and self._imu_thread.isRunning():
             QMessageBox.information(

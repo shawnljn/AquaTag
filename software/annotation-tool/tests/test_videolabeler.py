@@ -8,6 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import numpy as np
 import pandas as pd
+from PySide6.QtTest import QSignalSpy, QTest
 
 import VideoLabeler_QT as labeler
 
@@ -125,6 +126,36 @@ class WindowTests(unittest.TestCase):
             self.assertEqual(len(rows), 3)
             self.assertEqual(sum("Stroke" in row for row in rows), 1)
             self.assertEqual(sum("Turn" in row for row in rows), 1)
+            window.close()
+
+    def test_rapid_speed_changes_are_coalesced(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self.make_window(temp_dir)
+            rate_changes = QSignalSpy(window.player.playbackRateChanged)
+
+            window.on_speed_changed(150)
+            window.on_speed_changed(200)
+            window.on_speed_changed(250)
+
+            self.assertTrue(window.speed_apply_timer.isActive())
+            self.assertAlmostEqual(window.player.playbackRate(), 1.0)
+            QTest.qWait(window._speed_apply_delay_ms + 50)
+
+            self.assertAlmostEqual(window.player.playbackRate(), 2.5)
+            self.assertEqual(rate_changes.count(), 1)
+            self.assertEqual(window.session_state["playback_rate"], 2.5)
+            window.close()
+
+    def test_selected_speed_is_reapplied_after_media_load(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self.make_window(temp_dir)
+            window.on_speed_changed(200)
+            window._apply_requested_playback_rate()
+            window.player.setPlaybackRate(1.0)
+
+            window.on_media_status_changed(labeler.QMediaPlayer.MediaStatus.LoadedMedia)
+
+            self.assertAlmostEqual(window.player.playbackRate(), 2.0)
             window.close()
 
     def test_multi_hour_trace_is_bounded_to_display_size(self):
