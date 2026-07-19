@@ -51,3 +51,7 @@ DerivedData/
 *.pem
 *.key
 
+# Annotation-tool runtime output
+session_state.json
+labels.csv
+labels.log

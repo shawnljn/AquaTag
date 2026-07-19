@@ -58,13 +58,16 @@ AquaTag/
 
 Each folder contains a README describing its intended contents and release requirements.
 
+## Available software
+
+The optimized [AquaTag annotation tool](software/annotation-tool/) is available now. It provides synchronized video and sensor-trace review, keyboard-driven event marking, fine synchronization adjustment, and responsive plotting for long recordings.
+
 ## Planned release
 
 - PCB source, schematic, BOM, Gerbers, and assembly outputs
 - Enclosure and mounting source CAD plus printable exports
 - Step-by-step assembly and epoxy-potting instructions
 - nRF52832 firmware, BLE protocol, and sensor-log specification
-- Synchronized video and sensor annotation tool
 - React Native companion application
 - Hardware bring-up, programming, and application examples
 
