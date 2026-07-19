@@ -25,7 +25,6 @@ python VideoLabeler_QT.py
 Packaged releases are published on the repository's [Releases page](https://github.com/shawnljn/AquaTag/releases). Choose the archive matching your computer:
 
 - `macOS-arm64` for Apple-silicon Macs
-- `macOS-x86_64` for Intel Macs
 - `Windows-x86_64` for 64-bit Windows
 
 Extract the archive before launching AquaTag Labeler. The initial macOS packages are ad-hoc signed but not Apple-notarized, so macOS may require selecting **Open Anyway** in **System Settings → Privacy & Security** on first launch. Each archive has a matching SHA-256 checksum file.
