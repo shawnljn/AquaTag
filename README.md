@@ -52,8 +52,7 @@ AquaTag/
 │   ├── annotation-tool/    # Synchronized video and sensor review interface
 │   └── mobile-app/         # React Native companion application
 ├── examples/               # Hardware, firmware, and application examples
-├── docs/                   # Architecture, media, and release documentation
-└── paper/                  # Citation and publication links
+└── docs/                   # Architecture, media, and release documentation
 ```
 
 Each folder contains a README describing its intended contents and release requirements.
@@ -83,12 +82,6 @@ AquaTag is a research prototype, not certified personal protective equipment, a 
 - The current study evaluates recreational-to-proficient adult swimmers in a lane-controlled 25 m pool. It does not validate use by children, beginning swimmers, clinical populations, or in collision-prone/shared-lane conditions.
 
 Read the fabrication and testing documentation in `hardware/fabrication/` before deploying hardware.
-
-## Paper
-
-**AquaTag: An Open-Source Wearable Platform Enabling Flexible Sensor Placement for Aquatic Sensing**
-
-Publication venue, author list, DOI, PDF, and BibTeX will be added after the paper metadata is finalized. See [`paper/README.md`](paper/README.md) for the citation placeholder.
 
 ## Contributing
 
