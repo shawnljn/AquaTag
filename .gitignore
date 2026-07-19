@@ -55,3 +55,10 @@ DerivedData/
 session_state.json
 labels.csv
 labels.log
+software/annotation-tool/deployment/
+software/annotation-tool/pysidedeploy.spec
+software/annotation-tool/nuitka-crash-report.xml
+software/annotation-tool/*.app/
+software/annotation-tool/*.dist/
+software/annotation-tool/*.exe
+software/annotation-tool/release/

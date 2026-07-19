@@ -20,6 +20,30 @@ The current test pass used Python 3.11.2, PySide6 6.11.1, pyqtgraph 0.14.0, NumP
 python VideoLabeler_QT.py
 ```
 
+## Download the desktop app
+
+Packaged releases are published on the repository's [Releases page](https://github.com/shawnljn/AquaTag/releases). Choose the archive matching your computer:
+
+- `macOS-arm64` for Apple-silicon Macs
+- `macOS-x86_64` for Intel Macs
+- `Windows-x86_64` for 64-bit Windows
+
+Extract the archive before launching AquaTag Labeler. The initial macOS packages are ad-hoc signed but not Apple-notarized, so macOS may require selecting **Open Anyway** in **System Settings → Privacy & Security** on first launch. Each archive has a matching SHA-256 checksum file.
+
+Application settings are stored in the operating system's per-user application-data directory. Label files remain beside the selected video.
+
+## Build a desktop package
+
+Create a clean Python 3.11 environment, then run:
+
+```bash
+python -m pip install -r requirements-release.txt
+pyside6-deploy VideoLabeler_QT.py --name "AquaTag Labeler" --mode onefile \
+  --extra-modules=OpenGL,OpenGLWidgets,Svg,PrintSupport --force
+```
+
+On macOS this produces `AquaTag Labeler.app`; on Windows it produces `AquaTag Labeler.exe`. Packages must be built on their target operating system. Pushing a tag named `annotation-tool-v*` runs the packaging workflow and publishes all supported downloads as a GitHub Release.
+
 ## Workflow
 
 1. Select **Load Video**.

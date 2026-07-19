@@ -1,3 +1,20 @@
+# Nuitka reads these project options when pyside6-deploy builds the desktop app.
+# nuitka-project: --product-name=AquaTag Labeler
+# nuitka-project: --file-description=AquaTag synchronized video annotation tool
+# nuitka-project: --company-name=AquaTag
+# nuitka-project: --product-version=0.1.0
+# nuitka-project: --file-version=0.1.0
+# pyqtgraph resolves these Qt bindings through importlib, so static analysis
+# cannot discover them without explicit inclusion.
+# nuitka-project: --include-module=PySide6.QtOpenGL
+# nuitka-project: --include-module=PySide6.QtPrintSupport
+# nuitka-project-if: {OS} == "Darwin":
+#    nuitka-project: --macos-app-name=AquaTag Labeler
+#    nuitka-project: --macos-app-version=0.1.0
+#    nuitka-project: --macos-signed-app-name=org.aquatag.labeler
+# nuitka-project-if: {OS} == "Windows":
+#    nuitka-project: --windows-console-mode=disable
+
 import sys
 import os
 import json
@@ -24,12 +41,27 @@ from PySide6.QtMultimediaWidgets import QVideoWidget
 import pyqtgraph as pg
 from datetime import datetime, timezone
 
-APP_TITLE = "IMU Video Labeler (Qt + PyQtGraph)"
-SESSION_FILE = "session_state.json"
+APP_TITLE = "AquaTag Labeler"
+APP_VERSION = "0.1.0"
+ORGANIZATION_NAME = "AquaTag"
+SESSION_FILE: Optional[str] = os.environ.get("AQUATAG_SESSION_FILE")
 LABELS_CSV = "labels.csv"
 LABELS_LOG = "labels.log"
 
 DEFAULT_TIMEZONE = os.environ.get("AQUATAG_TIMEZONE")
+
+
+def session_file_path() -> str:
+    """Return a writable settings path for source and packaged runs."""
+    if SESSION_FILE:
+        return SESSION_FILE
+    state_dir = QtCore.QStandardPaths.writableLocation(
+        QtCore.QStandardPaths.StandardLocation.AppDataLocation
+    )
+    if not state_dir:
+        state_dir = os.path.join(os.path.expanduser("~"), ".aquatag-labeler")
+    os.makedirs(state_dir, exist_ok=True)
+    return os.path.join(state_dir, "session_state.json")
 
 def ms_to_iso(ms: int) -> str:
     try:
@@ -750,8 +782,9 @@ class MainWindow(QMainWindow):
 
     def _read_session_state(self):
         try:
-            if os.path.exists(SESSION_FILE):
-                with open(SESSION_FILE, "r", encoding="utf-8") as f:
+            path = session_file_path()
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
                     return json.load(f)
         except Exception:
             pass
@@ -762,7 +795,7 @@ class MainWindow(QMainWindow):
         if not force and (now - self._last_session_write) < self._session_write_interval:
             return
         try:
-            with open(SESSION_FILE, "w", encoding="utf-8") as f:
+            with open(session_file_path(), "w", encoding="utf-8") as f:
                 json.dump(self.session_state, f, indent=2)
             self._last_session_write = now
         except Exception as e:
@@ -1242,8 +1275,14 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setOrganizationName(ORGANIZATION_NAME)
+    app.setApplicationName("AquaTagLabeler")
+    app.setApplicationDisplayName(APP_TITLE)
+    app.setApplicationVersion(APP_VERSION)
     win = MainWindow()
     win.show()
+    if "--smoke-test" in sys.argv:
+        QTimer.singleShot(500, app.quit)
     sys.exit(app.exec())
 
 if __name__ == "__main__":

@@ -1,0 +1,7 @@
+# Exact versions used to create the desktop release artifacts.
+numpy==2.4.6
+pandas==3.0.3
+PySide6==6.11.1
+pyqtgraph==0.14.0
+Nuitka==4.0
+zstandard==0.25.0

@@ -1,0 +1,134 @@
+name: Package annotation tool
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "annotation-tool-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.display_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            display_name: macOS Apple silicon
+            artifact_name: AquaTag-Labeler-macOS-arm64
+            package_name: AquaTag-Labeler-macOS-arm64.zip
+          - os: macos-15-intel
+            display_name: macOS Intel
+            artifact_name: AquaTag-Labeler-macOS-x86_64
+            package_name: AquaTag-Labeler-macOS-x86_64.zip
+          - os: windows-latest
+            display_name: Windows x64
+            artifact_name: AquaTag-Labeler-Windows-x86_64
+            package_name: AquaTag-Labeler-Windows-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: software/annotation-tool
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: software/annotation-tool/requirements-release.txt
+
+      - name: Install release dependencies
+        run: python -m pip install -r requirements-release.txt
+
+      - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests -v
+
+      - name: Build desktop application
+        run: pyside6-deploy VideoLabeler_QT.py --name "AquaTag Labeler" --mode onefile --extra-modules=OpenGL,OpenGLWidgets,Svg,PrintSupport --force
+
+      - name: Ad-hoc sign macOS application
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep --sign - "AquaTag Labeler.app"
+          codesign --verify --deep --strict "AquaTag Labeler.app"
+
+      - name: Smoke-test macOS application
+        if: runner.os == 'macOS'
+        env:
+          QT_QPA_PLATFORM: offscreen
+          AQUATAG_SESSION_FILE: ${{ runner.temp }}/aquatag-labeler-smoke-session.json
+        run: ./AquaTag\ Labeler.app/Contents/MacOS/VideoLabeler_QT --smoke-test
+
+      - name: Package macOS application
+        if: runner.os == 'macOS'
+        env:
+          PACKAGE_NAME: ${{ matrix.package_name }}
+        run: |
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent "AquaTag Labeler.app" "release/${PACKAGE_NAME}"
+          cd release
+          shasum -a 256 "${PACKAGE_NAME}" > "${PACKAGE_NAME}.sha256"
+
+      - name: Smoke-test Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          AQUATAG_SESSION_FILE: ${{ runner.temp }}/aquatag-labeler-smoke-session.json
+        run: |
+          & '.\AquaTag Labeler.exe' --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PACKAGE_NAME: ${{ matrix.package_name }}
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive -LiteralPath 'AquaTag Labeler.exe' -DestinationPath "release/$env:PACKAGE_NAME"
+          $hash = (Get-FileHash "release/$env:PACKAGE_NAME" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $env:PACKAGE_NAME" | Set-Content "release/$env:PACKAGE_NAME.sha256" -Encoding ascii
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: software/annotation-tool/release/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/annotation-tool-v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: AquaTag-Labeler-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version="${RELEASE_TAG#annotation-tool-v}"
+          gh release create "${RELEASE_TAG}" release-assets/* \
+            --verify-tag \
+            --title "AquaTag Labeler ${version}" \
+            --notes "Packaged AquaTag video annotation tool for macOS and Windows. Each download has a matching SHA-256 checksum file. macOS packages are ad-hoc signed but not Apple-notarized, so first launch may require approval in Privacy & Security."

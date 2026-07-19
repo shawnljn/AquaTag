@@ -60,7 +60,7 @@ Each folder contains a README describing its intended contents and release requi
 
 ## Available software
 
-The optimized [AquaTag annotation tool](software/annotation-tool/) is available now. It provides synchronized video and sensor-trace review, keyboard-driven event marking, fine synchronization adjustment, and responsive plotting for long recordings.
+The optimized [AquaTag annotation tool](software/annotation-tool/) is available now. It provides synchronized video and sensor-trace review, keyboard-driven event marking, fine synchronization adjustment, and responsive plotting for long recordings. Ready-to-run macOS and Windows packages are published on the [Releases page](https://github.com/shawnljn/AquaTag/releases).
 
 ## Planned release
 
