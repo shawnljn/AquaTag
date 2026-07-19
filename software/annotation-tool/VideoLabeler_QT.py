@@ -14,6 +14,7 @@
 #    nuitka-project: --macos-signed-app-name=org.aquatag.labeler
 # nuitka-project-if: {OS} == "Windows":
 #    nuitka-project: --windows-console-mode=disable
+#    nuitka-project: --assume-yes-for-downloads
 
 import sys
 import os
