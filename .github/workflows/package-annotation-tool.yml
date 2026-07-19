@@ -93,7 +93,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Compress-Archive -LiteralPath 'AquaTag Labeler.exe' -DestinationPath "release/$env:PACKAGE_NAME"
           $hash = (Get-FileHash "release/$env:PACKAGE_NAME" -Algorithm SHA256).Hash.ToLower()
-          "$hash  $env:PACKAGE_NAME" | Set-Content "release/$env:PACKAGE_NAME.sha256" -Encoding ascii
+          "$hash  $env:PACKAGE_NAME" | Set-Content "release/$env:PACKAGE_NAME.sha256" -Encoding ascii -NoNewline
 
       - name: Upload package
         uses: actions/upload-artifact@v7
@@ -121,6 +121,7 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           version="${RELEASE_TAG#annotation-tool-v}"
